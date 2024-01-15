@@ -23,7 +23,6 @@ public class AppRunner implements CommandLineRunner {
 
         // Process the data (you can add your logic here)
         String jsonIssues = githubAPIConnector.toJson(githubData);
-
         // Send data to Kafka
         kafkaProducer.sendMessageToTopic(jsonIssues);
     }

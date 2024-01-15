@@ -29,9 +29,9 @@ public class KafkaMessagePublisher {
         CompletableFuture<SendResult<String, Object>> future = template.send(topic, message);
         future.whenComplete((result, exception) -> {
                     if (exception == null) {
-                        LOGGER.info("Sent Message: [" + message + "] with offset: [" + result.getRecordMetadata().offset() + "]");
+                        LOGGER.info("Sent Message: " + message + " with offset: [" + result.getRecordMetadata().offset() + "]");
                     } else {
-                        LOGGER.info("Unable to send message: [" + message + "] due to: " + exception.getMessage());
+                        LOGGER.info("Unable to send message: " + message + " due to: " + exception.getMessage());
                     }
                 }
         );

@@ -25,16 +25,23 @@ public class KafkaMessageListener {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "${kafka.topic}", groupId = "${kafka.groupID}")
+    @KafkaListener(topics = {"${kafka.topic1}", "${kafka.topic2}"}, groupId = "${kafka.groupID}")
     public void consume(String message){
         try {
             // Deserialize JSON string to your object (Issue in this case)
             List<Issue> issues = objectMapper.readValue(message, new TypeReference<List<Issue>>() {});
-            issueService.setIssues(issues);
+
+            // Retrieve the existing list of issues
+            List<Issue> existingIssues = issueService.getIssues();
+
+            // Merge the new issues into the existing list
+            existingIssues.addAll(issues);
+
+            // Set the merged list back to the service
+            issueService.setIssues(existingIssues);
 
             for (Issue issue : issues) {
                 log.info("Deserialized Issue => {} @ {} @ {}", issue.getId(), issue.getUsername(), issue.getComment());
-
                 // Code Save Data To Database...
             }
 

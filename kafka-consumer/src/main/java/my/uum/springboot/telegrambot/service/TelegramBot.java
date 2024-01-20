@@ -42,9 +42,10 @@ public class TelegramBot extends TelegramLongPollingBot {
     private String token;
     @Value("${bot.username}")
     private String username;
-    @Value("${producer.api.url}")
-    private String fetchUrl;
-
+    @Value("${producer1.api.url}")
+    private String fetchUrl1;
+    @Value("${producer2.api.url}")
+    private String fetchUrl2;
 
 
     @Override
@@ -57,31 +58,26 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             switch (userMessage.getText()) {
                 case "/start":
-                    String welcomeMessage = "Hi ...";
+                    String welcomeMessage = "Hi there! \uD83D\uDC4B Welcome to the Real-Time Issues Tracking System Bot!\n" +
+                            "\n" +
+                            "This bot provides real-time insights into GitHub Issues. Here are the available commands:\n" +
+                            "\n" +
+                            "- /start: Get started with the bot.\n" +
+                            "- /fetch: Fetch real-time GitHub Issues data.\n" +
+                            "- /display: Display the latest GitHub Issues.\n" +
+                            "- /process: Perform basic data processing.\n" +
+                            "\n" +
+                            "Happy exploring! \uD83D\uDE80";
                     sendMessage(chatID, welcomeMessage);
                     break;
                 case "/fetch":
-                    // Send an HTTP GET request to the producer
-                    String producerFetchUrl = fetchUrl + "/fetch";
+                    // Send HTTP GET request to the first producer
+                    String producer1FetchUrl = fetchUrl1 + "/fetch";
+                    processFetchRequest(chatID, producer1FetchUrl);
 
-                    // Use exchange to capture the response
-                    ResponseEntity<String> responseEntity = restTemplate.exchange(
-                            producerFetchUrl,
-                            HttpMethod.GET,
-                            null,
-                            String.class);
-
-                    // Process the response
-                    HttpStatus statusCode = (HttpStatus) responseEntity.getStatusCode();
-                    if (statusCode == HttpStatus.OK) {
-                        String responseBody = responseEntity.getBody();
-                        // Process the response body as needed
-                        sendMessage(chatID,"Fetch success");
-//                        sendMessage(chatID, "Received response from producer: " + responseBody);
-                    } else {
-                        // Handle other status codes if needed
-                        sendMessage(chatID, "Failed to fetch");
-                    }
+                    // Send HTTP GET request to the second producer
+                    String producer2FetchUrl = fetchUrl2 + "/fetch";
+                    processFetchRequest(chatID, producer2FetchUrl);
                     break;
                 case "/display":
                     List<Issue> issues = issueService.getIssues();
@@ -111,11 +107,37 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private void processFetchRequest(long chatID, String fetchUrl) {
+        try {
+            // Use exchange to capture the response
+            ResponseEntity<String> responseEntity = restTemplate.exchange(
+                    fetchUrl,
+                    HttpMethod.GET,
+                    null,
+                    String.class);
+
+            // Process the response
+            HttpStatus statusCode = (HttpStatus) responseEntity.getStatusCode();
+            if (statusCode == HttpStatus.OK) {
+                String responseBody = responseEntity.getBody();
+                sendMessage(chatID, "Fetch success from " + fetchUrl);
+                // Process the response body as needed
+                 sendMessage(chatID, "Received response from producer: " + responseBody);
+            } else {
+                // Handle other status codes if needed
+                sendMessage(chatID, "Failed to fetch from " + fetchUrl);
+            }
+        } catch (Exception e) {
+            sendMessage(chatID, "Error processing fetch request: " + e.getMessage());
+        }
+    }
+
     private String displayActiveCommenter(List<Issue> processIssues) {
         Map<String, Long> usernameOccurrences = countUsernames(processIssues);
         // Print the results
         List<Map.Entry<String, Long>> sortedEntries = usernameOccurrences.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .limit(10)
                 .collect(Collectors.toList());
 
         StringBuilder activeCommenterMsg = new StringBuilder("List of active commenters\n");
@@ -146,6 +168,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         Map<String, Integer> wordOccurrence = countWord(issuesString.toString());
         List<Map.Entry<String, Integer>> sortedEntries = wordOccurrence.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(10)
                 .collect(Collectors.toList());
 
         //Word Count Message

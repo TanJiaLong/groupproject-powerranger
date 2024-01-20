@@ -5,7 +5,11 @@ import my.uum.springboot.kafkaConsumer.service.IssueService;
 import my.uum.springboot.telegrambot.config.BotConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -24,19 +28,23 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     //No connect to database yet
     private final IssueService issueService;
+    private final RestTemplate restTemplate;
 
     @Autowired
-    public TelegramBot(BotConfig config, IssueService issueService) {
+    public TelegramBot(BotConfig config, IssueService issueService, RestTemplate restTemplate) {
         this.config = config;
         this.issueService = issueService;
 
+        this.restTemplate = restTemplate;
     }
 
     @Value("${bot.token}")
     private String token;
-
     @Value("${bot.username}")
     private String username;
+    @Value("${producer.api.url}")
+    private String fetchUrl;
+
 
 
     @Override
@@ -53,10 +61,27 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatID, welcomeMessage);
                     break;
                 case "/fetch":
-                    //if available, can auto fetch latest data, if issue updated, fetch the new data only and integrate it to database
-                    //or this method should be done by producer do?
-                    //send fetch data request to producer apps
-                    //to fetch real-time data from
+                    // Send an HTTP GET request to the producer
+                    String producerFetchUrl = fetchUrl + "/fetch";
+
+                    // Use exchange to capture the response
+                    ResponseEntity<String> responseEntity = restTemplate.exchange(
+                            producerFetchUrl,
+                            HttpMethod.GET,
+                            null,
+                            String.class);
+
+                    // Process the response
+                    HttpStatus statusCode = (HttpStatus) responseEntity.getStatusCode();
+                    if (statusCode == HttpStatus.OK) {
+                        String responseBody = responseEntity.getBody();
+                        // Process the response body as needed
+                        sendMessage(chatID,"Fetch success");
+//                        sendMessage(chatID, "Received response from producer: " + responseBody);
+                    } else {
+                        // Handle other status codes if needed
+                        sendMessage(chatID, "Failed to fetch");
+                    }
                     break;
                 case "/display":
                     List<Issue> issues = issueService.getIssues();
@@ -65,32 +90,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                     break;
                 case "/process":
                     List<Issue> processIssues = issueService.getIssues();
+
+                    //Process Message
                     StringBuilder processMessage = new StringBuilder();
-
                     String commenterCountMessage = displayActiveCommenter(processIssues);
-
                     String wordCountMessage = displayWordCount(processIssues);
-
                     processMessage.append(commenterCountMessage).append(wordCountMessage);
 
                     sendMessage(chatID, processMessage.toString());
-                    /**
-                     * Display data in this format
-                     *
-                     * List of active commenters
-                     * 1. zhamri [35 comments]
-                     * 2. Ali [29 comment]
-                     * 3. John [21 comment]
-                     * 4. ...
-                     * 5. ...
-                     *
-                     * List of word count
-                     * 1. the [2038 times]
-                     * 2. of [1014 times]
-                     * 3. ...
-                     * 4. ...
-                     *
-                     * */
                     break;
                 default:
                     String errMessage = "Please enter within the following command:\n" +
@@ -148,7 +155,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             wordCount.append(i + 1).append(". ")
                     .append(entry.getKey()).append(" [").append(entry.getValue()).append(" times]\n");
         }
-
         return wordCount.toString();
     }
 
@@ -161,7 +167,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         for (String word : words) {
             occurrences.put(word, occurrences.getOrDefault(word, 0) + 1);
         }
-
         return occurrences;
     }
     @Override
@@ -188,10 +193,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void displayIssues(long chatID, List<Issue> issues) {
         StringBuilder issuesMessage = new StringBuilder("List of Issues:\n");
-        for (Issue issue : issues) {
-            issuesMessage.append(String.format("%d. User: %s, Comment: %s\n", issue.getId(), issue.getUsername(), issue.getComment()));
+        for (int i = 0; i < issues.size(); i++) {
+            Issue issue = issues.get(i);
+            issuesMessage.append(String.format("%d. User: %s, Comment: %s\n", i, issue.getUsername(), issue.getComment()));
         }
-
         sendMessage(chatID, issuesMessage.toString());
     }
 }

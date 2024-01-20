@@ -1,4 +1,4 @@
-package my.uum.springboot.githubAPI;
+package my.uum.springboot.telegrambot.service;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

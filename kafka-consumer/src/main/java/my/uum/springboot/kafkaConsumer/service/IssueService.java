@@ -17,7 +17,4 @@ public class IssueService {
     public void setIssues(List<Issue> issues) {
         this.issues = issues;
     }
-
-
-
 }

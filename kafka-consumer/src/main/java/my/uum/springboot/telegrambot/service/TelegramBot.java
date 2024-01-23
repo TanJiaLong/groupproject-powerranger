@@ -26,10 +26,15 @@ import java.util.stream.Collectors;
 public class TelegramBot extends TelegramLongPollingBot {
     final BotConfig config;
 
-    //No connect to database yet
     private final IssueService issueService;
     private final RestTemplate restTemplate;
 
+    /**
+     * The constructor of Telegram Bot Service
+     * @param config The configuration of telegram bot
+     * @param issueService The list of issue object
+     * @param restTemplate To perform HTTP method
+     */
     @Autowired
     public TelegramBot(BotConfig config, IssueService issueService, RestTemplate restTemplate) {
         this.config = config;
@@ -47,7 +52,10 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Value("${producer2.api.url}")
     private String fetchUrl2;
 
-
+    /**
+     * The method is to handle user interaction with telegrambot
+     * @param update The updated input from user, either by text, click or other inputs
+     */
     @Override
     public void onUpdateReceived(Update update) {
 
@@ -112,6 +120,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * To Request data from Producer Applications
+     * @param chatID The ID of user who interacts with telegram bot
+     * @param fetchUrl The url to trigger producer to fetch data from github and send to kafka topic
+     */
     private void processFetchRequest(long chatID, String fetchUrl) {
         try {
             // Use exchange to capture the response
@@ -137,6 +150,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * The method to display top 10 active commenters
+     * @param processIssues List of issues consumed
+     * @return String of active commenters list
+     */
     private String displayActiveCommenter(List<Issue> processIssues) {
         Map<String, Long> usernameOccurrences = countUsernames(processIssues);
         // Print the results
@@ -155,12 +173,22 @@ public class TelegramBot extends TelegramLongPollingBot {
         return activeCommenterMsg.toString();
     }
 
+    /**
+     * The method is to count the occurrence of every username
+     * @param issues List of issues
+     * @return Map of username and its count
+     */
     private Map<String, Long> countUsernames(List<Issue> issues) {
         return issues.stream()
                 .map(Issue::getUsername)
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
     }
 
+    /**
+     * The method to display top 10 word count
+     * @param processIssues List of issues
+     * @return String of word count list
+     */
     private String displayWordCount(List<Issue> processIssues) {
         StringBuilder issuesString = new StringBuilder();
 
@@ -186,6 +214,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         return wordCount.toString();
     }
 
+    /**
+     * The method is to count the occurrence of every word
+     * @param input All text in comment body
+     * @return Map of word and its count
+     */
     private static Map<String, Integer> countWord(String input) {
         Map<String, Integer> occurrences = new HashMap<>();
 
@@ -207,6 +240,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         return config.getToken();
     }
 
+    /**
+     * The method is to handle the message to be sent by telegram bot
+     * @param chatID ID of user who interacts with telegram
+     * @param message Message needs to be sent by telegram bot
+     */
     private void sendMessage(long chatID, String message) {
         SendMessage botMessage = new SendMessage();
         botMessage.setChatId(chatID);
@@ -219,6 +257,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * The method is to display all issues
+     * @param chatID ID of user who interacts with telegram
+     * @param issues List of issues
+     */
     private void displayIssues(long chatID, List<Issue> issues) {
         StringBuilder issuesMessage = new StringBuilder("List of Issues:\n");
         for (int i = 0; i < issues.size(); i++) {

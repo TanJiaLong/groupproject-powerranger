@@ -71,6 +71,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatID, welcomeMessage);
                     break;
                 case "/fetch":
+                    issueService.getIssues().clear();
                     // Send HTTP GET request to the first producer
                     String producer1FetchUrl = fetchUrl1 + "/fetch";
                     processFetchRequest(chatID, producer1FetchUrl);
@@ -94,6 +95,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                     processMessage.append(commenterCountMessage).append(wordCountMessage);
 
                     sendMessage(chatID, processMessage.toString());
+                    break;
+                case "/clear":
+                    issueService.getIssues().clear();
+                    sendMessage(chatID, "Issues cleared");
                     break;
                 default:
                     String errMessage = "Please enter within the following command:\n" +
